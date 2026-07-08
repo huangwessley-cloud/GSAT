@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>墨跡 CMS · 後台管理</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Noto+Serif+TC:wght@300;400;500;600&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FBFAF7;
+    --bg-soft: #F2F0EA;
+    --panel: #FFFFFF;
+    --ink: #21201C;
+    --ink-soft: #6E6B62;
+    --ink-faint: #A9A69C;
+    --line: #E4E1D8;
+    --accent: #3E6B4F;
+    --accent-soft: #E8EFE9;
+    --danger: #B0492F;
+    --danger-soft: #F6E7E2;
+    --amber: #9A7B2D;
+    --amber-soft: #F4EDDA;
+    --shadow: 0 1px 2px rgba(33,32,28,.04), 0 10px 30px rgba(33,32,28,.06);
+    --serif-latin: "Fraunces", serif;
+    --serif: "Fraunces", "Noto Serif TC", serif;
+    --sans: "Noto Sans TC", system-ui, sans-serif;
+  }
+  [data-theme="dark"] {
+    --bg: #191915;
+    --bg-soft: #21211C;
+    --panel: #1F1F1A;
+    --ink: #EDEBE3;
+    --ink-soft: #A5A296;
+    --ink-faint: #6E6B60;
+    --line: #33322B;
+    --accent: #8DBE9C;
+    --accent-soft: #24352A;
+    --danger: #D98A73;
+    --danger-soft: #3A2A24;
+    --amber: #CFAF62;
+    --amber-soft: #383019;
+    --shadow: 0 1px 2px rgba(0,0,0,.2), 0 10px 30px rgba(0,0,0,.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: var(--sans); font-weight: 300; font-size: 15px;
+    line-height: 1.75; -webkit-font-smoothing: antialiased;
+    transition: background .4s, color .4s;
+  }
+  ::selection { background: var(--accent-soft); color: var(--accent); }
+  button { font-family: var(--sans); cursor: pointer; }
+  button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+
+  /* ---------- Layout ---------- */
+  .app { display: flex; min-height: 100vh; }
+
+  aside {
+    width: 232px; flex-shrink: 0;
+    border-right: 1px solid var(--line);
+    padding: 26px 16px;
+    display: flex; flex-direction: column; gap: 4px;
+    position: sticky; top: 0; height: 100vh;
+    background: var(--bg);
+  }
+  .brand {
+    font-family: var(--serif); font-size: 19px; font-weight: 500;
+    padding: 0 12px 22px; letter-spacing: .04em;
+    display: flex; align-items: baseline; gap: 8px;
+  }
+  .brand span {
+    font-family: var(--serif-latin); font-style: italic; font-weight: 300;
+    font-size: 11px; color: var(--accent);
+    border: 1px solid var(--accent); border-radius: 99px; padding: 1px 9px;
+  }
+  aside nav button {
+    display: flex; align-items: center; gap: 11px; width: 100%;
+    background: none; border: none; border-radius: 10px;
+    padding: 10px 12px; font-size: 14px; color: var(--ink-soft);
+    transition: all .18s; text-align: left;
+  }
+  aside nav button:hover { color: var(--ink); background: var(--bg-soft); }
+  aside nav button.active { color: var(--accent); background: var(--accent-soft); font-weight: 400; }
+  aside nav button svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .side-foot { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
+  .side-foot a, .side-foot button.ghost {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px; color: var(--ink-faint); text-decoration: none;
+    padding: 8px 12px; border-radius: 10px; border: none; background: none;
+    transition: color .18s;
+  }
+  .side-foot a:hover, .side-foot button.ghost:hover { color: var(--accent); }
+
+  main { flex: 1; padding: 40px 48px 80px; max-width: 1060px; }
+
+  .topbar { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 34px; gap: 20px; flex-wrap: wrap; }
+  .topbar h1 { font-family: var(--serif); font-weight: 500; font-size: 27px; letter-spacing: .02em; }
+  .topbar .sub { color: var(--ink-faint); font-size: 13px; margin-top: 4px; }
+
+  .view { display: none; animation: fade .35s ease both; }
+  .view.active { display: block; }
+  @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .view { animation: none; } }
+
+  /* ---------- Buttons ---------- */
+  .btn {
+    border: none; border-radius: 99px; padding: 10px 22px;
+    font-size: 14px; letter-spacing: .03em; transition: all .18s;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-primary { background: var(--accent); color: var(--bg); }
+  .btn-primary:hover { opacity: .88; transform: translateY(-1px); }
+  .btn-outline { background: none; border: 1px solid var(--line); color: var(--ink-soft); }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger { background: none; border: 1px solid var(--line); color: var(--danger); }
+  .btn-danger:hover { border-color: var(--danger); background: var(--danger-soft); }
+  .btn-sm { padding: 6px 14px; font-size: 12.5px; }
+
+  /* ---------- Dashboard ---------- */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 36px; }
+  .stat {
+    border: 1px solid var(--line); border-radius: 16px; padding: 22px 24px;
+    background: var(--panel); transition: all .2s;
+  }
+  .stat:hover { box-shadow: var(--shadow); transform: translateY(-2px); }
+  .stat .n { font-family: var(--serif-latin); font-size: 38px; font-weight: 300; line-height: 1.1; color: var(--accent); }
+  .stat .l { font-size: 13px; color: var(--ink-soft); margin-top: 6px; }
+
+  .panel {
+    border: 1px solid var(--line); border-radius: 16px;
+    background: var(--panel); padding: 26px 28px; margin-bottom: 24px;
+  }
+  .panel h3 { font-family: var(--serif); font-size: 17px; font-weight: 500; margin-bottom: 16px; }
+
+  /* ---------- Post table ---------- */
+  .toolbar { display: flex; gap: 12px; margin-bottom: 22px; flex-wrap: wrap; align-items: center; }
+  .search {
+    flex: 1; min-width: 200px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 99px;
+    padding: 10px 20px; font-size: 14px; color: var(--ink); font-family: var(--sans);
+  }
+  .search:focus { outline: none; border-color: var(--accent); }
+  select.filter {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 99px;
+    padding: 10px 16px; font-size: 13.5px; color: var(--ink-soft); font-family: var(--sans);
+  }
+
+  .post-row {
+    display: flex; align-items: center; gap: 18px;
+    padding: 18px 6px; border-bottom: 1px solid var(--line);
+    transition: padding-left .2s;
+  }
+  .post-row:hover { padding-left: 14px; }
+  .post-row .info { flex: 1; min-width: 0; cursor: pointer; }
+  .post-row .t {
+    font-family: var(--serif); font-size: 16.5px; font-weight: 500;
+    transition: color .18s; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .post-row .info:hover .t { color: var(--accent); }
+  .post-row .m { font-size: 12.5px; color: var(--ink-faint); margin-top: 3px; }
+  .badge {
+    font-size: 11.5px; padding: 3px 12px; border-radius: 99px;
+    letter-spacing: .06em; white-space: nowrap;
+  }
+  .badge.pub { background: var(--accent-soft); color: var(--accent); }
+  .badge.draft { background: var(--amber-soft); color: var(--amber); }
+  .row-actions { display: flex; gap: 8px; }
+  .icon-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    border: 1px solid var(--line); background: none; color: var(--ink-soft);
+    display: grid; place-items: center; transition: all .18s;
+  }
+  .icon-btn svg { width: 14px; height: 14px; }
+  .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .icon-btn.del:hover { border-color: var(--danger); color: var(--danger); background: var(--danger-soft); }
+  .empty { text-align: center; padding: 60px 0; color: var(--ink-faint); font-size: 14px; }
+  .empty .big { font-family: var(--serif); font-size: 20px; color: var(--ink-soft); margin-bottom: 8px; }
+
+  /* ---------- Editor ---------- */
+  .editor-grid { display: grid; grid-template-columns: 1fr 300px; gap: 26px; align-items: start; }
+  .ed-main { min-width: 0; }
+  .ed-side { position: sticky; top: 32px; display: flex; flex-direction: column; gap: 18px; }
+
+  .field { margin-bottom: 20px; }
+  .field label {
+    display: block; font-size: 12.5px; color: var(--ink-soft);
+    margin-bottom: 7px; letter-spacing: .08em;
+  }
+  .field input, .field textarea, .field select {
+    width: 100%; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; padding: 12px 16px; font-size: 15px;
+    color: var(--ink); font-family: var(--sans); transition: border-color .18s;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus { outline: none; border-color: var(--accent); }
+  input.title-input {
+    font-family: var(--serif) !important; font-size: 24px !important;
+    font-weight: 500; padding: 16px 18px !important;
+  }
+  textarea.body-input {
+    min-height: 420px; resize: vertical; line-height: 2;
+    font-size: 15.5px; font-family: var(--serif);
+  }
+  .hint { font-size: 12px; color: var(--ink-faint); margin-top: 6px; }
+  .counter { font-size: 12px; color: var(--ink-faint); text-align: right; margin-top: 6px; font-variant-numeric: tabular-nums; }
+
+  .ed-actions { display: flex; flex-direction: column; gap: 10px; }
+  .ed-actions .btn { justify-content: center; width: 100%; }
+  .autosave-note {
+    font-size: 12px; color: var(--ink-faint); text-align: center;
+    font-style: italic; font-family: var(--serif-latin); min-height: 18px;
+  }
+
+  /* ---------- Preview ---------- */
+  .preview-toggle { display: flex; border: 1px solid var(--line); border-radius: 99px; overflow: hidden; margin-bottom: 22px; width: fit-content; }
+  .preview-toggle button {
+    background: none; border: none; padding: 8px 22px; font-size: 13px; color: var(--ink-soft);
+  }
+  .preview-toggle button.active { background: var(--accent); color: var(--bg); }
+  .preview-pane { display: none; }
+  .preview-pane.show { display: block; }
+  .write-pane.hide { display: none; }
+  .pv-meta { display: flex; gap: 12px; font-size: 12.5px; color: var(--ink-faint); margin-bottom: 10px; }
+  .pv-meta .tag { color: var(--accent); }
+  .pv-title { font-family: var(--serif); font-weight: 500; font-size: 30px; line-height: 1.5; margin-bottom: 12px; }
+  .pv-excerpt { font-family: var(--serif); font-size: 17px; color: var(--ink-soft); margin-bottom: 28px; padding-bottom: 28px; border-bottom: 1px solid var(--line); }
+  .pv-body p { margin-bottom: 24px; font-size: 16px; line-height: 2; }
+
+  /* ---------- Settings ---------- */
+  .setting-row { display: flex; justify-content: space-between; align-items: center; gap: 24px; padding: 18px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .setting-row:last-child { border-bottom: none; }
+  .setting-row .d { font-size: 13px; color: var(--ink-soft); margin-top: 3px; max-width: 480px; }
+  .setting-row .t { font-size: 15px; font-weight: 400; }
+
+  /* ---------- Toast ---------- */
+  #toast {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--ink); color: var(--bg); border-radius: 99px;
+    padding: 11px 26px; font-size: 13.5px; opacity: 0; pointer-events: none;
+    transition: all .3s ease; z-index: 100; box-shadow: var(--shadow);
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ---------- Modal ---------- */
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(20,20,16,.4); backdrop-filter: blur(3px);
+    display: none; place-items: center; z-index: 90;
+  }
+  .modal-bg.show { display: grid; }
+  .modal {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 18px;
+    padding: 30px 32px; max-width: 380px; width: calc(100% - 48px); box-shadow: var(--shadow);
+  }
+  .modal h4 { font-family: var(--serif); font-size: 18px; font-weight: 500; margin-bottom: 10px; }
+  .modal p { font-size: 14px; color: var(--ink-soft); margin-bottom: 24px; }
+  .modal .row { display: flex; gap: 10px; justify-content: flex-end; }
+
+  /* ---------- Mobile ---------- */
+  @media (max-width: 900px) { .editor-grid { grid-template-columns: 1fr; } .ed-side { position: static; } }
+  @media (max-width: 720px) {
+    .app { flex-direction: column; }
+    aside { width: 100%; height: auto; position: static; flex-direction: row; align-items: center; overflow-x: auto; padding: 12px 16px; border-right: none; border-bottom: 1px solid var(--line); }
+    .brand { padding: 0 10px 0 0; white-space: nowrap; }
+    aside nav { display: flex; gap: 4px; }
+    aside nav button { white-space: nowrap; padding: 8px 12px; }
+    aside nav button span.txt { display: none; }
+    .side-foot { margin: 0 0 0 auto; flex-direction: row; }
+    .side-foot .label-txt { display: none; }
+    main { padding: 26px 20px 70px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside>
+    <div class="brand">墨跡 <span>CMS</span></div>
+    <nav>
+      <button data-view="dashboard" class="active" onclick="show('dashboard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        <span class="txt">儀表板</span>
+      </button>
+      <button data-view="posts" onclick="show('posts')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+        <span class="txt">文章管理</span>
+      </button>
+      <button data-view="editor" onclick="newPost()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        <span class="txt">寫新文章</span>
+      </button>
+      <button data-view="settings" onclick="show('settings')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h0a1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+        <span class="txt">設定</span>
+      </button>
+    </nav>
+    <div class="side-foot">
+      <a href="index.html" target="_blank">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>
+        <span class="label-txt">檢視部落格</span>
+      </a>
+      <button class="ghost" onclick="toggleTheme()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        <span class="label-txt">明暗模式</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main>
+
+    <!-- ====== Dashboard ====== -->
+    <section class="view active" id="view-dashboard">
+      <div class="topbar">
+        <div><h1>儀表板</h1><div class="sub" id="dash-greet"></div></div>
+        <button class="btn btn-primary" onclick="newPost()">＋ 寫新文章</button>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="n" id="st-total">0</div><div class="l">全部文章</div></div>
+        <div class="stat"><div class="n" id="st-pub">0</div><div class="l">已發佈</div></div>
+        <div class="stat"><div class="n" id="st-draft">0</div><div class="l">草稿</div></div>
+        <div class="stat"><div class="n" id="st-chars">0</div><div class="l">總字數</div></div>
+      </div>
+      <div class="panel">
+        <h3>最近更新</h3>
+        <div id="dash-recent"></div>
+      </div>
+    </section>
+
+    <!-- ====== Posts ====== -->
+    <section class="view" id="view-posts">
+      <div class="topbar">
+        <div><h1>文章管理</h1><div class="sub">點擊標題即可編輯</div></div>
+        <button class="btn btn-primary" onclick="newPost()">＋ 寫新文章</button>
+      </div>
+      <div class="toolbar">
+        <input class="search" id="q" placeholder="搜尋標題或摘要⋯" oninput="renderPosts()">
+        <select class="filter" id="f-status" onchange="renderPosts()">
+          <option value="all">全部狀態</option>
+          <option value="pub">已發佈</option>
+          <option value="draft">草稿</option>
+        </select>
+        <select class="filter" id="f-tag" onchange="renderPosts()"></select>
+      </div>
+      <div id="post-table"></div>
+    </section>
+
+    <!-- ====== Editor ====== -->
+    <section class="view" id="view-editor">
+      <div class="topbar">
+        <div><h1 id="ed-heading">寫新文章</h1><div class="sub">空一行即分段;內文會自動計算閱讀時間</div></div>
+        <button class="btn btn-outline" onclick="show('posts')">← 回文章列表</button>
+      </div>
+
+      <div class="preview-toggle">
+        <button id="tab-write" class="active" onclick="setPreview(false)">撰寫</button>
+        <button id="tab-preview" onclick="setPreview(true)">預覽</button>
+      </div>
+
+      <div class="editor-grid">
+        <div class="ed-main">
+          <!-- Write pane -->
+          <div class="write-pane" id="write-pane">
+            <div class="field">
+              <input class="title-input" id="ed-title" placeholder="文章標題" oninput="dirty()">
+            </div>
+            <div class="field">
+              <label for="ed-excerpt">摘要(顯示於文章列表)</label>
+              <textarea id="ed-excerpt" rows="2" oninput="dirty()" placeholder="一兩句話,說明這篇文章在想什麼。"></textarea>
+            </div>
+            <div class="field">
+              <label for="ed-body">內文</label>
+              <textarea class="body-input" id="ed-body" oninput="dirty(); updateCount()" placeholder="開始寫吧。段落之間空一行。&#10;&#10;第一段會以較大的引言字體顯示。"></textarea>
+              <div class="counter" id="ed-count">0 字 · 約 1 分鐘</div>
+            </div>
+          </div>
+          <!-- Preview pane -->
+          <div class="preview-pane" id="preview-pane">
+            <div class="pv-meta"><span id="pv-date"></span><span>·</span><span class="tag" id="pv-tag"></span><span>·</span><span id="pv-read"></span></div>
+            <div class="pv-title" id="pv-title"></div>
+            <div class="pv-excerpt" id="pv-excerpt"></div>
+            <div class="pv-body" id="pv-body"></div>
+          </div>
+        </div>
+
+        <!-- Side -->
+        <div class="ed-side">
+          <div class="panel" style="margin:0">
+            <h3>發佈設定</h3>
+            <div class="field">
+              <label for="ed-tag">分類</label>
+              <select id="ed-tag" onchange="tagSelect(); dirty()"></select>
+              <input id="ed-tag-custom" placeholder="輸入新分類名稱" style="display:none; margin-top:8px" oninput="dirty()">
+            </div>
+            <div class="field">
+              <label for="ed-date">日期</label>
+              <input id="ed-date" type="date" onchange="dirty()">
+            </div>
+            <div class="field" style="margin-bottom:8px">
+              <label>狀態</label>
+              <div id="ed-status-badge"><span class="badge draft">草稿</span></div>
+            </div>
+          </div>
+          <div class="ed-actions">
+            <button class="btn btn-primary" onclick="savePost(true)">發佈文章</button>
+            <button class="btn btn-outline" onclick="savePost(false)">儲存為草稿</button>
+            <button class="btn btn-danger" id="ed-delete" style="display:none" onclick="askDelete(editingId)">刪除這篇文章</button>
+            <div class="autosave-note" id="autosave-note"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== Settings ====== -->
+    <section class="view" id="view-settings">
+      <div class="topbar"><div><h1>設定</h1><div class="sub">資料備份與同步</div></div></div>
+      <div class="panel">
+        <h3>資料</h3>
+        <div class="setting-row">
+          <div><div class="t">匯出文章備份(JSON)</div><div class="d">將所有文章(含草稿)下載為 JSON 檔,可用於備份或搬移到其他瀏覽器。</div></div>
+          <button class="btn btn-outline" onclick="exportJSON()">匯出</button>
+        </div>
+        <div class="setting-row">
+          <div><div class="t">匯入文章備份</div><div class="d">從先前匯出的 JSON 檔還原文章。匯入會覆蓋目前的所有資料。</div></div>
+          <div>
+            <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(this)">
+            <button class="btn btn-outline" onclick="document.getElementById('import-file').click()">選擇檔案</button>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div><div class="t">還原範例文章</div><div class="d">清除所有文章,還原為八篇內建範例。此動作無法復原。</div></div>
+          <button class="btn btn-danger" onclick="askReset()">還原</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>與部落格前台同步</h3>
+        <p style="font-size:14px; color:var(--ink-soft)">後台的資料儲存在瀏覽器本機儲存空間中。只要用<strong style="font-weight:500; color:var(--ink)">同一個瀏覽器</strong>開啟 <code style="background:var(--bg-soft); padding:2px 8px; border-radius:6px; font-size:13px">index.html</code>,前台就會自動顯示這裡「已發佈」的文章;草稿不會出現在前台。若要換瀏覽器或電腦,請先匯出 JSON,再到新環境匯入。</p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Toast & Modal -->
+<div id="toast"></div>
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h4 id="modal-title"></h4>
+    <p id="modal-text"></p>
+    <div class="row">
+      <button class="btn btn-outline btn-sm" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary btn-sm" id="modal-confirm" style="background:var(--danger)">確認</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================= Data layer ================= */
+const CMS_KEY = "moji_posts";
+const baseTags = ["寫作", "閱讀", "工具", "生活"];
+
+const seedPosts = [
+  { id:1, title:"筆記系統為何總是崩壞(一):收集的陷阱", tag:"寫作", date:"2026.06.28",
+    excerpt:"我們花太多時間「存下來以後看」,太少時間真的回去看。問題不在工具,在於收集本身給了我們虛假的完成感。",
+    body:["每隔一年半,我就會推倒重來一次自己的筆記系統。換工具、換分類法、換命名規則——然後在十八個月後,再次面對一座沒人想進去的倉庫。","這次我決定不再換工具,而是先問一個更根本的問題:為什麼「收集」這個動作,本身就這麼令人上癮?","答案可能很不舒服:因為按下「儲存」的那一刻,大腦會產生一種微小的完成感,彷彿那個知識已經是我們的了。但儲存不是理解,書籤不是閱讀。","於是倉庫越來越滿,而我們越來越少回去。這個系列接下來的三篇,我想逐一拆解:收集、整理、輸出——這三個環節各自的陷阱,以及我目前找到的、還算誠實的解法。"], published:true },
+  { id:2, title:"重讀十年前的部落格,我學到的三件事", tag:"閱讀", date:"2026.05.14",
+    excerpt:"演算法時代之前的網路寫作,有一種現在很少見的從容。那些文章不急著說服你,只是慢慢把一件事想清楚。",
+    body:["最近整理舊書籤,挖出一批 2014 年前後收藏的部落格文章。點開之前,我以為會看到過時的觀點;點開之後,我看到的是一種已經很少見的寫作姿態。","第一件事:那時候的文章不怕長。作者假設讀者願意坐下來,跟他一起把一個問題翻來覆去地想。沒有「三秒抓住注意力」的開頭,沒有每兩段一個小標題的焦慮。","第二件事:那時候的文章敢說「我不確定」。不確定不是弱點,而是誠實思考的自然狀態。現在的內容產業裡,不確定的聲音幾乎絕跡了。","第三件事:好的想法真的可以活很久。有幾篇文章的觀點,放到今天依然新鮮——因為它們處理的是慢問題,不是快新聞。","這也是我想在這座花園裡做的事:寫一些十年後重讀,依然不臉紅的東西。"], published:true },
+  { id:3, title:"晨間五百字:第 42 天的誠實報告", tag:"生活", date:"2026.04.30",
+    excerpt:"連續寫了六週的晨間文字之後,我發現最大的收穫不是產量,而是我終於分清楚了「想寫」和「想發佈」的差別。",
+    body:["四十二天前,我給自己立了一個規矩:每天早上,咖啡之後、郵件之前,寫五百字。不修改、不發佈、不給任何人看。","頭一週非常難受。手指在鍵盤上,腦子卻在想「這段寫得真爛」。直到我意識到:那個聲音不是在評價文字,它是在評價「別人會怎麼看這段文字」。","可是沒有別人。這五百字永遠不會被看見。當這件事真正沉進心裡之後,寫作忽然變成了另一件事——不是表演,是排水。把腦子裡淤積的東西排出去,清出空間。","第 42 天的今天,我可以誠實地說:這些文字九成是垃圾。但正是因為允許垃圾存在,那一成好東西才有機會浮出來。這篇文章的雛形,就來自第 31 天早上的某一段。"], published:true },
+  { id:4, title:"工具的重量:為什麼我回到純文字", tag:"工具", date:"2026.03.18",
+    excerpt:"功能越多的寫作工具,越容易讓人把時間花在調整工具,而不是寫作本身。這是我用了七套軟體之後的結論。",
+    body:["過去五年,我認真用過七套寫作軟體。每一套都承諾讓寫作更輕鬆,每一套最後都變成了新的拖延藉口。","模式是這樣的:蜜月期,我沉迷於設定模板、調整標籤、研究快捷鍵;三個月後,我發現自己對工具瞭若指掌,產出卻沒有變多。","今年年初,我把初稿工作全部搬回最簡陋的純文字編輯器。沒有格式,沒有外掛,游標一閃一閃,除了寫,無事可做。","結果是:寫作沒有變輕鬆——它本來就不該輕鬆——但變得誠實了。工具退到背景之後,剩下的只有我和還沒想清楚的那個問題。","工具當然重要,但它的重要性有一個上限:它最多只能不擋路。"], published:true },
+  { id:5, title:"公開學習,還是安靜累積?", tag:"寫作", date:"2026.02.09",
+    excerpt:"「Learn in public」是好建議,但它有一個很少被討論的代價:當學習變成內容,你會開始為了可發佈性而學。",
+    body:["「公開學習」大概是過去幾年最流行的建議之一:把學習過程寫出來、發出去,讓輸出倒逼輸入。我照做了兩年,收穫很多,但也想談談沒人提的那一面。","代價是微妙的:當你知道筆記將被看見,你會不自覺地挑「適合展示的東西」學。冷門的、難以簡化的、短期內講不出所以然的題目,慢慢被排擠出清單。","學習開始向可發佈性傾斜——這不是虛偽,是激勵結構的自然結果。","我目前的解法是把兩者分開:私下的筆記負責誠實,允許混亂、允許錯、允許半途而廢;公開的文章負責清晰,只有在私下想得夠久之後,才拿出來。","這座花園,就是兩者之間的緩衝地帶。"], published:true },
+  { id:6, title:"讀書不做筆記,可以嗎?", tag:"閱讀", date:"2025.12.21",
+    excerpt:"有一類書,做筆記反而是對它的辜負。判斷標準很簡單:你是在讀它,還是在開採它?",
+    body:["筆記文化盛行之後,「讀書不做筆記」聽起來幾乎像浪費。但今年我刻意做了一個實驗:挑幾本書,空手去讀。","結果出乎意料。沒有了「這段要不要記下來」的持續判斷,閱讀變回了一種沉浸——像游泳,而不是在河邊採礦。","我後來想明白了:書分兩種。一種是工具書,你去開採它,筆記是理所當然的;另一種是需要你整個人泡進去的書,對它做摘錄,就像對一場好對話做會議紀錄。","現在我的原則是:第一遍空手讀,合上書,過一週。如果有什麼東西還留在腦子裡,那才是真正值得寫下來的——而且那時寫下的,已經是我自己的話了。"], published:true },
+  { id:7, title:"步行,作為一種寫作方法", tag:"生活", date:"2025.11.02",
+    excerpt:"卡住的段落,坐在桌前是解不開的。我的經驗是:三公里,不帶手機,問題會自己走到答案旁邊。",
+    body:["這篇文章的核心論點,是在一次散步的第二十分鐘想到的。這不是巧合——我幾乎所有還算不錯的想法,都是走路走出來的。","坐在桌前,思考是線性的:你盯著卡住的那一句,越盯越死。走路的時候,思考變成漫遊,注意力鬆開了,後台的某個進程反而開始運轉。","我的具體做法:卡住超過二十分鐘,就出門。三公里,不帶耳機,不帶手機——這一點非常重要,口袋裡有手機,散步就只是換個地方分心。","回來之後,通常不是「想到了答案」,而是發現問題本身變了形狀:原來卡住的地方,是因為前一段就寫歪了。","桌子適合執行,路適合思考。"], published:true },
+  { id:8, title:"這座花園的種植手冊", tag:"工具", date:"2025.09.15",
+    excerpt:"關於本站的運作方式:種子、幼苗、常青三種狀態,以及為什麼舊文章會悄悄改變。",
+    body:["歡迎來到這座數位花園。在你迷路之前,這裡是一份簡短的種植手冊。","這裡的文章有三種狀態。種子:一個粗略的想法,可能只有幾段,不保證正確。幼苗:成形中的草稿,論點大致站得住,細節還在生長。常青:會被長期照料的文章,我會定期回來修剪、補充。","這意味著一件在別處很少見的事:你今天讀到的文章,三個月後可能長得不一樣。我不覺得這是不誠信——恰恰相反,假裝想法從發佈那一刻起就凝固不動,才是。","如果你想追蹤某篇文章的變化,每篇常青文的結尾都有修訂記錄。歡迎常回來看看,花園最好看的時候,永遠是下一季。"], published:true }
+];
+
+let storageOK = true;
+function loadPosts() {
+  try {
+    const raw = localStorage.getItem(CMS_KEY);
+    if (!raw) { localStorage.setItem(CMS_KEY, JSON.stringify(seedPosts)); return [...seedPosts]; }
+    const data = JSON.parse(raw);
+    return Array.isArray(data) ? data : [...seedPosts];
+  } catch (e) { storageOK = false; return [...seedPosts]; }
+}
+function persist() {
+  try { localStorage.setItem(CMS_KEY, JSON.stringify(postsData)); }
+  catch (e) { toast("⚠ 無法寫入瀏覽器儲存空間(私密瀏覽模式?)"); }
+}
+
+let postsData = loadPosts();
+let editingId = null;
+let isDirty = false;
+
+/* ================= Helpers ================= */
+const $ = id => document.getElementById(id);
+function esc(s) { const d = document.createElement("div"); d.textContent = s || ""; return d.innerHTML; }
+function allTags() { return [...new Set([...baseTags, ...postsData.map(p => p.tag).filter(Boolean)])]; }
+function calcRead(text) { return Math.max(1, Math.round((text || "").replace(/\s/g, "").length / 400)) + " 分鐘"; }
+function fmtDate(iso) { return iso ? iso.replaceAll("-", ".") : ""; }
+function isoDate(dotted) { return dotted ? dotted.replaceAll(".", "-") : ""; }
+function todayISO() { return new Date().toISOString().slice(0, 10); }
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2600);
+}
+
+/* ================= Navigation ================= */
+function show(view) {
+  if (view !== "editor" && $("view-editor").classList.contains("active") && isDirty) {
+    if (!confirm("有尚未儲存的變更,確定要離開嗎?")) return;
+    isDirty = false;
+  }
+  document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+  $("view-" + view).classList.add("active");
+  document.querySelectorAll("aside nav button").forEach(b =>
+    b.classList.toggle("active", b.dataset.view === view));
+  if (view === "dashboard") renderDash();
+  if (view === "posts") renderPosts();
+  window.scrollTo({ top: 0 });
+}
+
+/* ================= Dashboard ================= */
+function renderDash() {
+  const pub = postsData.filter(p => p.published !== false);
+  const drafts = postsData.filter(p => p.published === false);
+  const chars = postsData.reduce((n, p) => n + (p.body || []).join("").length, 0);
+  $("st-total").textContent = postsData.length;
+  $("st-pub").textContent = pub.length;
+  $("st-draft").textContent = drafts.length;
+  $("st-chars").textContent = chars.toLocaleString();
+  const h = new Date().getHours();
+  $("dash-greet").textContent = (h < 5 ? "夜深了,靈感也醒著。" : h < 12 ? "早安,今天想寫點什麼?" : h < 18 ? "午後好,花園等你來照料。" : "晚上好,適合安靜地寫幾段。");
+
+  const recent = [...postsData].sort((a, b) => (b.date || "").localeCompare(a.date || "")).slice(0, 5);
+  $("dash-recent").innerHTML = recent.length ? "" : `<div class="empty">還沒有文章。</div>`;
+  recent.forEach(p => $("dash-recent").appendChild(rowEl(p)));
+}
+
+/* ================= Post list ================= */
+function renderTagFilter() {
+  const sel = $("f-tag"); const cur = sel.value;
+  sel.innerHTML = `<option value="all">全部分類</option>` + allTags().map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join("");
+  if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
+}
+function rowEl(p) {
+  const row = document.createElement("div");
+  row.className = "post-row";
+  const status = p.published !== false ? `<span class="badge pub">已發佈</span>` : `<span class="badge draft">草稿</span>`;
+  row.innerHTML = `
+    <div class="info" onclick="editPost(${p.id})">
+      <div class="t">${esc(p.title) || "(未命名)"}</div>
+      <div class="m">${esc(p.date)} · ${esc(p.tag || "未分類")} · ${calcRead((p.body || []).join(""))}</div>
+    </div>
+    ${status}
+    <div class="row-actions">
+      <button class="icon-btn" title="編輯" onclick="editPost(${p.id})">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      </button>
+      <button class="icon-btn" title="${p.published !== false ? "改為草稿" : "發佈"}" onclick="togglePublish(${p.id})">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">${p.published !== false
+          ? '<path d="M17.9 17.9A9.9 9.9 0 0 1 12 20C5 20 2 12 2 12a17.4 17.4 0 0 1 4.1-5.9M9.9 4.2A9.4 9.4 0 0 1 12 4c7 0 10 8 10 8a17.5 17.5 0 0 1-1.7 2.7M1 1l22 22"/>'
+          : '<path d="M2 12s3-8 10-8 10 8 10 8-3 8-10 8-10-8-10-8Z"/><circle cx="12" cy="12" r="3"/>'}</svg>
+      </button>
+      <button class="icon-btn del" title="刪除" onclick="askDelete(${p.id})">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+      </button>
+    </div>`;
+  return row;
+}
+function renderPosts() {
+  renderTagFilter();
+  const q = ($("q").value || "").trim();
+  const st = $("f-status").value, tg = $("f-tag").value;
+  const list = [...postsData]
+    .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
+    .filter(p => st === "all" || (st === "pub" ? p.published !== false : p.published === false))
+    .filter(p => tg === "all" || p.tag === tg)
+    .filter(p => !q || (p.title || "").includes(q) || (p.excerpt || "").includes(q));
+  const wrap = $("post-table");
+  wrap.innerHTML = "";
+  if (!list.length) {
+    wrap.innerHTML = `<div class="empty"><div class="big">沒有符合的文章</div>換個關鍵字,或寫一篇新的?</div>`;
+    return;
+  }
+  list.forEach(p => wrap.appendChild(rowEl(p)));
+}
+
+/* ================= Editor ================= */
+function fillTagSelect(current) {
+  const sel = $("ed-tag");
+  sel.innerHTML = allTags().map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join("") + `<option value="__new__">＋ 新增分類⋯</option>`;
+  if (current && [...sel.options].some(o => o.value === current)) sel.value = current;
+  $("ed-tag-custom").style.display = "none";
+  $("ed-tag-custom").value = "";
+}
+function tagSelect() {
+  $("ed-tag-custom").style.display = $("ed-tag").value === "__new__" ? "block" : "none";
+}
+function currentTag() {
+  return $("ed-tag").value === "__new__" ? ($("ed-tag-custom").value.trim() || "未分類") : $("ed-tag").value;
+}
+
+function newPost() {
+  editingId = null; isDirty = false;
+  $("ed-heading").textContent = "寫新文章";
+  $("ed-title").value = ""; $("ed-excerpt").value = ""; $("ed-body").value = "";
+  $("ed-date").value = todayISO();
+  fillTagSelect(baseTags[0]);
+  $("ed-status-badge").innerHTML = `<span class="badge draft">尚未儲存</span>`;
+  $("ed-delete").style.display = "none";
+  $("autosave-note").textContent = "";
+  updateCount(); setPreview(false); show("editor");
+  $("ed-title").focus();
+}
+function editPost(id) {
+  const p = postsData.find(x => x.id === id);
+  if (!p) return;
+  editingId = id; isDirty = false;
+  $("ed-heading").textContent = "編輯文章";
+  $("ed-title").value = p.title || "";
+  $("ed-excerpt").value = p.excerpt || "";
+  $("ed-body").value = (p.body || []).join("\n\n");
+  $("ed-date").value = isoDate(p.date) || todayISO();
+  fillTagSelect(p.tag);
+  $("ed-status-badge").innerHTML = p.published !== false
+    ? `<span class="badge pub">已發佈</span>` : `<span class="badge draft">草稿</span>`;
+  $("ed-delete").style.display = "block";
+  $("autosave-note").textContent = "";
+  updateCount(); setPreview(false); show("editor");
+}
+function dirty() { isDirty = true; $("autosave-note").textContent = "有未儲存的變更"; }
+function updateCount() {
+  const t = $("ed-body").value;
+  $("ed-count").textContent = t.replace(/\s/g, "").length.toLocaleString() + " 字 · 約 " + calcRead(t);
+}
+function bodyToParas() {
+  return $("ed-body").value.split(/\n\s*\n/).map(s => s.replace(/\n/g, "").trim()).filter(Boolean);
+}
+function savePost(publish) {
+  const title = $("ed-title").value.trim();
+  if (!title) { toast("請先輸入標題"); $("ed-title").focus(); return; }
+  const paras = bodyToParas();
+  const data = {
+    title,
+    tag: currentTag(),
+    date: fmtDate($("ed-date").value || todayISO()),
+    excerpt: $("ed-excerpt").value.trim() || (paras[0] || "").slice(0, 60),
+    body: paras,
+    read: calcRead(paras.join("")),
+    published: publish
+  };
+  if (editingId == null) {
+    data.id = postsData.length ? Math.max(...postsData.map(p => p.id)) + 1 : 1;
+    postsData.push(data);
+    editingId = data.id;
+  } else {
+    const i = postsData.findIndex(p => p.id === editingId);
+    postsData[i] = { ...postsData[i], ...data };
+  }
+  persist();
+  isDirty = false;
+  $("ed-heading").textContent = "編輯文章";
+  $("ed-delete").style.display = "block";
+  $("ed-status-badge").innerHTML = publish
+    ? `<span class="badge pub">已發佈</span>` : `<span class="badge draft">草稿</span>`;
+  $("autosave-note").textContent = "已儲存 · " + new Date().toLocaleTimeString("zh-Hant", { hour: "2-digit", minute: "2-digit" });
+  toast(publish ? "✓ 已發佈,前台重新整理即可看到" : "✓ 已儲存為草稿");
+}
+function togglePublish(id) {
+  const p = postsData.find(x => x.id === id);
+  p.published = !(p.published !== false);
+  persist(); renderPosts(); renderDash();
+  toast(p.published ? "✓ 已發佈" : "已改為草稿,前台將不再顯示");
+}
+
+/* ================= Preview ================= */
+function setPreview(on) {
+  $("tab-write").classList.toggle("active", !on);
+  $("tab-preview").classList.toggle("active", on);
+  $("write-pane").classList.toggle("hide", on);
+  $("preview-pane").classList.toggle("show", on);
+  if (on) {
+    $("pv-title").textContent = $("ed-title").value || "(未命名)";
+    $("pv-date").textContent = fmtDate($("ed-date").value || todayISO());
+    $("pv-tag").textContent = currentTag();
+    $("pv-read").textContent = calcRead($("ed-body").value);
+    $("pv-excerpt").textContent = $("ed-excerpt").value;
+    $("pv-excerpt").style.display = $("ed-excerpt").value ? "block" : "none";
+    const b = $("pv-body"); b.innerHTML = "";
+    bodyToParas().forEach((para, i) => {
+      const el = document.createElement("p");
+      if (i === 0) { el.style.fontFamily = "var(--serif)"; el.style.fontSize = "18px"; el.style.color = "var(--ink-soft)"; }
+      el.textContent = para;
+      b.appendChild(el);
+    });
+    if (!b.children.length) b.innerHTML = `<p style="color:var(--ink-faint)">(還沒有內文)</p>`;
+  }
+}
+
+/* ================= Delete / Reset modal ================= */
+let modalAction = null;
+function openModal(title, text, action) {
+  $("modal-title").textContent = title;
+  $("modal-text").textContent = text;
+  modalAction = action;
+  $("modal").classList.add("show");
+}
+function closeModal() { $("modal").classList.remove("show"); modalAction = null; }
+$("modal-confirm").onclick = () => { if (modalAction) modalAction(); closeModal(); };
+$("modal").addEventListener("click", e => { if (e.target === $("modal")) closeModal(); });
+
+function askDelete(id) {
+  const p = postsData.find(x => x.id === id);
+  openModal("刪除文章?", `「${p.title || "未命名"}」將被永久刪除,無法復原。`, () => {
+    postsData = postsData.filter(x => x.id !== id);
+    persist();
+    if (editingId === id) { editingId = null; isDirty = false; show("posts"); }
+    renderPosts(); renderDash();
+    toast("已刪除");
+  });
+}
+function askReset() {
+  openModal("還原範例文章?", "所有目前的文章(含草稿)將被清除,並還原為八篇內建範例。", () => {
+    postsData = JSON.parse(JSON.stringify(seedPosts));
+    persist(); renderPosts(); renderDash();
+    toast("✓ 已還原範例文章");
+  });
+}
+
+/* ================= Import / Export ================= */
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(postsData, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "moji-posts-" + todayISO() + ".json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast("✓ 備份已下載");
+}
+function importJSON(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (!Array.isArray(data)) throw new Error();
+      postsData = data;
+      persist(); renderPosts(); renderDash();
+      toast("✓ 匯入完成,共 " + data.length + " 篇文章");
+    } catch (e) { toast("⚠ 檔案格式不正確,請選擇先前匯出的 JSON 備份"); }
+    input.value = "";
+  };
+  reader.readAsText(file);
+}
+
+/* ================= Theme ================= */
+let theme = "light";
+function toggleTheme() {
+  theme = theme === "light" ? "dark" : "light";
+  document.documentElement.setAttribute("data-theme", theme);
+}
+
+/* ================= Shortcuts & guards ================= */
+document.addEventListener("keydown", e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === "s" && $("view-editor").classList.contains("active")) {
+    e.preventDefault(); savePost($("ed-status-badge").textContent.includes("已發佈"));
+  }
+});
+window.addEventListener("beforeunload", e => { if (isDirty) { e.preventDefault(); e.returnValue = ""; } });
+
+/* ================= Init ================= */
+if (!storageOK) toast("⚠ 瀏覽器儲存空間不可用,變更將無法保存");
+renderDash();
+renderPosts();
+</script>
+</body>
+</html>
