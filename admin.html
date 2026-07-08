@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Noto+Serif+TC:wght@300;400;500;600&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
 <style>
   :root {
     --bg: #FBFAF7;
@@ -205,6 +207,28 @@
     min-height: 420px; resize: vertical; line-height: 2;
     font-size: 15.5px; font-family: var(--serif);
   }
+  #ed-body-editor { border-radius: 12px; overflow: hidden; border: 1px solid var(--line); }
+  #ed-body-editor .ql-toolbar {
+    background: var(--bg-soft); border: none; border-bottom: 1px solid var(--line);
+    font-family: var(--sans);
+  }
+  #ed-body-editor .ql-container {
+    border: none; font-family: var(--serif); font-size: 15.5px; color: var(--ink);
+    background: var(--panel);
+  }
+  #ed-body-editor .ql-editor { min-height: 380px; line-height: 2; padding: 18px 20px; }
+  #ed-body-editor .ql-editor.ql-blank::before { color: var(--ink-faint); font-style: normal; }
+  #ed-body-editor .ql-stroke { stroke: var(--ink-soft); }
+  #ed-body-editor .ql-fill { fill: var(--ink-soft); }
+  #ed-body-editor .ql-picker { color: var(--ink-soft); }
+  #ed-body-editor button:hover .ql-stroke, #ed-body-editor button.ql-active .ql-stroke { stroke: var(--accent); }
+  #ed-body-editor button:hover .ql-fill, #ed-body-editor button.ql-active .ql-fill { fill: var(--accent); }
+  #ed-body-editor .ql-picker-options { background: var(--panel); border-color: var(--line); }
+  .pv-body h2, .pv-body h3 { font-family: var(--serif); font-weight: 500; margin: 30px 0 12px; }
+  .pv-body ul, .pv-body ol { margin: 0 0 24px 22px; }
+  .pv-body blockquote { border-left: 2px solid var(--accent); padding-left: 18px; color: var(--ink-soft); margin: 24px 0; }
+  .pv-body a { color: var(--accent); text-decoration: underline; }
+  .pv-body img { border-radius: 10px; margin: 20px 0; }
   .hint { font-size: 12px; color: var(--ink-faint); margin-top: 6px; }
   .counter { font-size: 12px; color: var(--ink-faint); text-align: right; margin-top: 6px; font-variant-numeric: tabular-nums; }
 
@@ -373,8 +397,8 @@
               <textarea id="ed-excerpt" rows="2" oninput="dirty()" placeholder="一兩句話,說明這篇文章在想什麼。"></textarea>
             </div>
             <div class="field">
-              <label for="ed-body">內文</label>
-              <textarea class="body-input" id="ed-body" oninput="dirty(); updateCount()" placeholder="開始寫吧。段落之間空一行。&#10;&#10;第一段會以較大的引言字體顯示。"></textarea>
+              <label for="ed-body-editor">內文</label>
+              <div id="ed-body-editor"></div>
               <div class="counter" id="ed-count">0 字 · 約 1 分鐘</div>
             </div>
           </div>
@@ -513,6 +537,12 @@ const $ = id => document.getElementById(id);
 function esc(s) { const d = document.createElement("div"); d.textContent = s || ""; return d.innerHTML; }
 function allTags() { return [...new Set([...baseTags, ...postsData.map(p => p.tag).filter(Boolean)])]; }
 function calcRead(text) { return Math.max(1, Math.round((text || "").replace(/\s/g, "").length / 400)) + " 分鐘"; }
+/* body may be a legacy array of plain-text paragraphs (seed data) or an HTML string (Quill output) */
+function bodyToHtml(body) { return Array.isArray(body) ? body.map(p => `<p>${esc(p)}</p>`).join("") : (body || ""); }
+function bodyToText(body) {
+  if (Array.isArray(body)) return body.join("");
+  const d = document.createElement("div"); d.innerHTML = body || ""; return d.textContent || "";
+}
 function fmtDate(iso) { return iso ? iso.replaceAll("-", ".") : ""; }
 function isoDate(dotted) { return dotted ? dotted.replaceAll(".", "-") : ""; }
 function todayISO() { return new Date().toISOString().slice(0, 10); }
@@ -540,7 +570,7 @@ function show(view) {
 function renderDash() {
   const pub = postsData.filter(p => p.published !== false);
   const drafts = postsData.filter(p => p.published === false);
-  const chars = postsData.reduce((n, p) => n + (p.body || []).join("").length, 0);
+  const chars = postsData.reduce((n, p) => n + bodyToText(p.body).length, 0);
   $("st-total").textContent = postsData.length;
   $("st-pub").textContent = pub.length;
   $("st-draft").textContent = drafts.length;
@@ -566,7 +596,7 @@ function rowEl(p) {
   row.innerHTML = `
     <div class="info" onclick="editPost(${p.id})">
       <div class="t">${esc(p.title) || "(未命名)"}</div>
-      <div class="m">${esc(p.date)} · ${esc(p.tag || "未分類")} · ${calcRead((p.body || []).join(""))}</div>
+      <div class="m">${esc(p.date)} · ${esc(p.tag || "未分類")} · ${calcRead(bodyToText(p.body))}</div>
     </div>
     ${status}
     <div class="row-actions">
@@ -617,10 +647,25 @@ function currentTag() {
   return $("ed-tag").value === "__new__" ? ($("ed-tag-custom").value.trim() || "未分類") : $("ed-tag").value;
 }
 
+const quill = new Quill("#ed-body-editor", {
+  theme: "snow",
+  placeholder: "開始寫吧……",
+  modules: {
+    toolbar: [
+      ["bold", "italic", "underline", "strike"],
+      [{ header: [2, 3, false] }],
+      [{ list: "ordered" }, { list: "bullet" }],
+      ["blockquote", "link", "image"],
+      ["clean"]
+    ]
+  }
+});
+quill.on("text-change", () => { dirty(); updateCount(); });
+
 function newPost() {
   editingId = null; isDirty = false;
   $("ed-heading").textContent = "寫新文章";
-  $("ed-title").value = ""; $("ed-excerpt").value = ""; $("ed-body").value = "";
+  $("ed-title").value = ""; $("ed-excerpt").value = ""; quill.setText("");
   $("ed-date").value = todayISO();
   fillTagSelect(baseTags[0]);
   $("ed-status-badge").innerHTML = `<span class="badge draft">尚未儲存</span>`;
@@ -636,7 +681,8 @@ function editPost(id) {
   $("ed-heading").textContent = "編輯文章";
   $("ed-title").value = p.title || "";
   $("ed-excerpt").value = p.excerpt || "";
-  $("ed-body").value = (p.body || []).join("\n\n");
+  quill.setText("");
+  quill.clipboard.dangerouslyPasteHTML(bodyToHtml(p.body));
   $("ed-date").value = isoDate(p.date) || todayISO();
   fillTagSelect(p.tag);
   $("ed-status-badge").innerHTML = p.published !== false
@@ -647,23 +693,20 @@ function editPost(id) {
 }
 function dirty() { isDirty = true; $("autosave-note").textContent = "有未儲存的變更"; }
 function updateCount() {
-  const t = $("ed-body").value;
+  const t = quill.getText();
   $("ed-count").textContent = t.replace(/\s/g, "").length.toLocaleString() + " 字 · 約 " + calcRead(t);
-}
-function bodyToParas() {
-  return $("ed-body").value.split(/\n\s*\n/).map(s => s.replace(/\n/g, "").trim()).filter(Boolean);
 }
 function savePost(publish) {
   const title = $("ed-title").value.trim();
   if (!title) { toast("請先輸入標題"); $("ed-title").focus(); return; }
-  const paras = bodyToParas();
+  const plainText = quill.getText().trim();
   const data = {
     title,
     tag: currentTag(),
     date: fmtDate($("ed-date").value || todayISO()),
-    excerpt: $("ed-excerpt").value.trim() || (paras[0] || "").slice(0, 60),
-    body: paras,
-    read: calcRead(paras.join("")),
+    excerpt: $("ed-excerpt").value.trim() || plainText.slice(0, 60),
+    body: plainText ? quill.getSemanticHTML() : "",
+    read: calcRead(plainText),
     published: publish
   };
   if (editingId == null) {
@@ -700,16 +743,13 @@ function setPreview(on) {
     $("pv-title").textContent = $("ed-title").value || "(未命名)";
     $("pv-date").textContent = fmtDate($("ed-date").value || todayISO());
     $("pv-tag").textContent = currentTag();
-    $("pv-read").textContent = calcRead($("ed-body").value);
+    $("pv-read").textContent = calcRead(quill.getText());
     $("pv-excerpt").textContent = $("ed-excerpt").value;
     $("pv-excerpt").style.display = $("ed-excerpt").value ? "block" : "none";
-    const b = $("pv-body"); b.innerHTML = "";
-    bodyToParas().forEach((para, i) => {
-      const el = document.createElement("p");
-      if (i === 0) { el.style.fontFamily = "var(--serif)"; el.style.fontSize = "18px"; el.style.color = "var(--ink-soft)"; }
-      el.textContent = para;
-      b.appendChild(el);
-    });
+    const b = $("pv-body");
+    b.innerHTML = quill.getText().trim() ? quill.getSemanticHTML() : "";
+    const firstP = b.querySelector("p");
+    if (firstP) { firstP.style.fontFamily = "var(--serif)"; firstP.style.fontSize = "18px"; firstP.style.color = "var(--ink-soft)"; }
     if (!b.children.length) b.innerHTML = `<p style="color:var(--ink-faint)">(還沒有內文)</p>`;
   }
 }

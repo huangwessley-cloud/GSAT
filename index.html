@@ -291,6 +291,11 @@
   .post-body { padding-bottom: 100px; }
   .post-body p { margin-bottom: 26px; font-size: 16.5px; color: var(--ink); line-height: 2; }
   .post-body p.dim { color: var(--ink-soft); }
+  .post-body h2, .post-body h3 { font-family: var(--serif); font-weight: 500; margin: 44px 0 18px; color: var(--ink); }
+  .post-body ul, .post-body ol { margin: 0 0 26px 24px; color: var(--ink); font-size: 16.5px; line-height: 2; }
+  .post-body blockquote { border-left: 2px solid var(--accent); padding-left: 22px; color: var(--ink-soft); font-family: var(--serif); font-size: 18px; margin: 32px 0; }
+  .post-body a { color: var(--accent); text-decoration: underline; }
+  .post-body img { border-radius: 12px; margin: 30px 0; }
 
   /* ---------- Footer ---------- */
   footer { border-top: 1px solid var(--line); padding: 46px 0 56px; }
@@ -588,6 +593,10 @@ function renderArchive() {
 }
 
 /* ---------- Post view ---------- */
+/* body may be a legacy array of plain-text paragraphs (seed data) or an HTML string (CMS/Quill output) */
+function esc(s) { const d = document.createElement("div"); d.textContent = s || ""; return d.innerHTML; }
+function bodyToHtml(body) { return Array.isArray(body) ? body.map(p => `<p>${esc(p)}</p>`).join("") : (body || ""); }
+
 function openPost(id) {
   const p = posts.find(x => x.id === id);
   document.getElementById("p-title").textContent = p.title;
@@ -595,13 +604,9 @@ function openPost(id) {
   document.getElementById("p-tag").textContent = p.tag;
   document.getElementById("p-read").textContent = p.read;
   const body = document.getElementById("p-body");
-  body.innerHTML = "";
-  p.body.forEach((para, i) => {
-    const el = document.createElement("p");
-    if (i === 0) { el.className = "dim"; el.style.fontFamily = "var(--serif)"; el.style.fontSize = "18px"; }
-    el.textContent = para;
-    body.appendChild(el);
-  });
+  body.innerHTML = bodyToHtml(p.body);
+  const firstP = body.querySelector("p");
+  if (firstP) { firstP.classList.add("dim"); firstP.style.fontFamily = "var(--serif)"; firstP.style.fontSize = "18px"; }
   go("post", true);
 }
 
