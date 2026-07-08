@@ -229,6 +229,16 @@
   .pv-body blockquote { border-left: 2px solid var(--accent); padding-left: 18px; color: var(--ink-soft); margin: 24px 0; }
   .pv-body a { color: var(--accent); text-decoration: underline; }
   .pv-body img { border-radius: 10px; margin: 20px 0; }
+  .pv-body .ql-align-center { text-align: center; }
+  .pv-body .ql-align-right { text-align: right; }
+  .pv-body .ql-align-justify { text-align: justify; }
+  .pv-body pre { background: var(--bg-soft); border-radius: 10px; padding: 16px 18px; font-family: ui-monospace, "SF Mono", monospace; font-size: 14px; line-height: 1.7; overflow-x: auto; margin-bottom: 24px; color: var(--ink); }
+  .pv-body hr { border: none; border-top: 1px solid var(--line); margin: 36px 0; }
+  #ed-body-editor .ql-editor .ql-align-center { text-align: center; }
+  #ed-body-editor .ql-editor .ql-align-right { text-align: right; }
+  #ed-body-editor .ql-editor .ql-align-justify { text-align: justify; }
+  #ed-body-editor .ql-editor pre { background: var(--bg-soft); border-radius: 8px; color: var(--ink); }
+  #ed-body-editor .ql-editor hr { border: none; border-top: 1px solid var(--line); margin: 24px 0; }
   .hint { font-size: 12px; color: var(--ink-faint); margin-top: 6px; }
   .counter { font-size: 12px; color: var(--ink-faint); text-align: right; margin-top: 6px; font-variant-numeric: tabular-nums; }
 
@@ -647,18 +657,33 @@ function currentTag() {
   return $("ed-tag").value === "__new__" ? ($("ed-tag-custom").value.trim() || "未分類") : $("ed-tag").value;
 }
 
+Quill.import("ui/icons").divider = '<svg viewbox="0 0 18 18"><line class="ql-stroke" x1="3" y1="9" x2="15" y2="9"></line></svg>';
+const HRBlot = class extends Quill.import("blots/block/embed") {};
+HRBlot.blotName = "hr";
+HRBlot.tagName = "hr";
+Quill.register(HRBlot);
+
 const quill = new Quill("#ed-body-editor", {
   theme: "snow",
   placeholder: "開始寫吧……",
   modules: {
-    toolbar: [
-      ["bold", "italic", "underline", "strike"],
-      [{ background: ["#FFF3B0", "#C8E6C9", "#F8BBD0", false] }],
-      [{ header: [2, 3, false] }],
-      [{ list: "ordered" }, { list: "bullet" }],
-      ["blockquote", "link", "image"],
-      ["clean"]
-    ]
+    toolbar: {
+      container: [
+        ["bold", "italic", "underline", "strike"],
+        [{ color: [] }, { background: ["#FFF3B0", "#C8E6C9", "#F8BBD0", false] }],
+        [{ header: [2, 3, false] }, { align: [] }],
+        [{ list: "ordered" }, { list: "bullet" }],
+        ["blockquote", "code-block", "link", "image", "divider"],
+        ["clean"]
+      ],
+      handlers: {
+        divider() {
+          const range = this.quill.getSelection(true);
+          this.quill.insertEmbed(range.index, "hr", true, Quill.sources.USER);
+          this.quill.setSelection(range.index + 1, Quill.sources.SILENT);
+        }
+      }
+    }
   }
 });
 quill.on("text-change", () => { dirty(); updateCount(); });
